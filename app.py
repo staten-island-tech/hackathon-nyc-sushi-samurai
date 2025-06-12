@@ -1,91 +1,79 @@
 import pygame
+import random
 import sys
 
-# Initialize Pygame
 pygame.init()
 
-# Set up display
-WIDTH, HEIGHT = 800, 600
-win = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Oregon Trail (Hood Edition)")
 
-background = pygame.image.load('8-bit.png').convert()
-background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+scene1_bg = pygame.image.load('background.jpg')
 
-# Load character sprite
-person = pygame.image.load('pixel-art-student-character-png.webp').convert_alpha()
-person = pygame.transform.scale(person, (64, 64))  # Resize if needed
-flipped_person = pygame.transform.flip(person, True, False)
+# Screen
+WIDTH, HEIGHT = 600, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Duck Hunt ( New York Edition )")
 
-# Set initial player position and speed
-player_x = WIDTH // 2
-player_y = HEIGHT // 2
-player_speed = 5
-player_vy = 0
-gravity = 0.5
-jump_strength = -10
-on_ground = False
-facing_right = True
-current_sprite = person
-
-FLOOR_Y = HEIGHT - 150
-# Set up clock
+# Clock
 clock = pygame.time.Clock()
-running = True
 
-# Main game loop
+# Load duck image
+duck_image = pygame.image.load("pigeon.png")
+duck_image = pygame.transform.scale(duck_image, (80, 80))
+
+# Font
+font = pygame.font.SysFont(None, 36)
+
+# Score
+score = 0
+
+# Duck class
+class Duck(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = duck_image
+        self.rect = self.image.get_rect()
+        self.rect.x = -self.rect.width  # Start off screen
+        self.rect.y = random.randint(50, HEIGHT - 150)
+        self.speed = random.randint(30, 50)
+
+    def update(self):
+        self.rect.x += self.speed
+        if self.rect.left > WIDTH:
+            self.kill()  # Remove duck if it leaves screen
+
+# Sprite group for ducks
+ducks = pygame.sprite.Group()
+
+# Spawn timer
+SPAWN_EVENT = pygame.USEREVENT + 1
+pygame.time.set_timer(SPAWN_EVENT, 1500)
+
+# Main loop
+running = True
 while running:
-    clock.tick(60)  # Cap FPS to 60
+    screen.blit(scene1_bg, (0, 0))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # Movement input
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-        player_x -= player_speed
-        if facing_right:
-            current_sprite = flipped_person
-            facing_right = False
-    elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-        player_x += player_speed
-        if not facing_right:
-            current_sprite = person
-            facing_right = True
+        if event.type == SPAWN_EVENT:
+            ducks.add(Duck())
 
-    # Jumping
-    if keys[pygame.K_SPACE] and on_ground:
-        player_vy = jump_strength
-        on_ground = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for duck in ducks:
+                if duck.rect.collidepoint(event.pos):
+                    duck.kill()
+                    score += 1
 
-    # Apply gravity
-    player_vy += gravity
-    player_y += player_vy
+    ducks.update()
+    ducks.draw(screen)
 
-    # Check collision with floor
-    if player_y >= FLOOR_Y:
-        player_y = FLOOR_Y
-        player_vy = 0
-        on_ground = True
-    else:
-        on_ground = False
+    # Display score
+    score_text = font.render(f"Score: {score}", True, (0, 0, 0))
+    screen.blit(score_text, (10, 10))
 
-    # Boundary clamping
-    player_x = max(0, min(WIDTH - person.get_width(), player_x))
+    pygame.display.flip()
+    clock.tick(60)
 
-    # Fill background
-    win.fill((245, 245, 220))  # Parchment color
-    player_x = max(0, min(WIDTH - person.get_width(), player_x))
-    player_y = max(0, min(HEIGHT - person.get_height(), player_y))
-    # Draw character
-    
-    win.blit(background, (0, 0))
-    win.blit(person, (player_x, player_y))
-
-    # Update display
-    pygame.display.update()
-
-# Clean up
 pygame.quit()
 sys.exit()
